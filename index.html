@@ -3,73 +3,191 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Personal Spotify Style Analysis (Public)</title>
+  <title>Music Persona | Spotify Analytics</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            spotify: '#1DB954',
+            dark: '#121212',
+            card: '#181818',
+            glass: 'rgba(255, 255, 255, 0.05)'
+          },
+          animation: {
+            'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    .scroll-container::-webkit-scrollbar { width: 8px; }
-    .scroll-container::-webkit-scrollbar-thumb { background: #34d399; border-radius: 4px; }
-    .scroll-container::-webkit-scrollbar-track { background: #1f2937; }
+    body {
+      background-color: #000;
+      background-image: 
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+        radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+      background-attachment: fixed;
+    }
+    
+    /* 自定義捲軸 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #1DB954; }
+
+    .glass-card {
+      background: rgba(24, 24, 24, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
   </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-4 flex items-center justify-center">
-  <div id="app" class="w-full max-w-2xl mx-auto bg-gray-800 shadow-2xl rounded-xl p-6 md:p-8 space-y-6">
-    <h1 class="text-2xl md:text-3xl font-bold text-teal-400 text-center">
-      Personal Spotify Style Analysis
-    </h1>
+<body class="text-white min-h-screen flex items-center justify-center p-4 md:p-8">
 
-    <!-- 登入區塊 -->
-    <div id="login-section" class="flex flex-col items-center space-y-4">
-      <p class="text-gray-400 text-center">
-        請登入您的 Spotify 帳號，以分析您最常聽的音樂風格。
+  <!-- 主容器 -->
+  <div id="app" class="w-full max-w-4xl glass-card rounded-3xl shadow-2xl p-6 md:p-10 relative overflow-hidden transition-all duration-500 min-h-[500px] flex flex-col justify-center">
+    
+    <!-- 背景裝飾光暈 -->
+    <div class="absolute -top-20 -left-20 w-64 h-64 bg-green-500/20 rounded-full blur-[100px] pointer-events-none"></div>
+    <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-500/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="relative z-10 text-center mb-8">
+      <div class="inline-flex items-center justify-center w-12 h-12 mb-4 rounded-full bg-spotify/20 text-spotify">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-500">
+        Music Persona
+      </h1>
+      <p class="text-gray-400 text-sm md:text-base">解碼你的 Spotify 音樂基因與聽眾人格</p>
+    </header>
+
+    <!-- 1. 登入區塊 -->
+    <div id="login-section" class="flex flex-col items-center space-y-8 relative z-10 py-10">
+      <div class="glass-card p-6 rounded-2xl max-w-sm text-center border-t border-white/10">
+        <p class="text-gray-300 mb-6 leading-relaxed">
+          我們將分析您近期的聆聽數據，計算出您的「主流指數」、「新歌敏感度」以及「潛在語系偏好」。
+        </p>
+        <button id="loginBtn"
+                class="group relative w-full px-8 py-4 bg-spotify hover:bg-[#1ed760] text-black font-bold rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(29,185,84,0.3)] hover:shadow-[0_0_30px_rgba(29,185,84,0.6)] transform hover:-translate-y-1">
+          <span class="flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+            連結 Spotify 帳號
+          </span>
+        </button>
+      </div>
+      <p class="text-xs text-gray-500">
+        安全聲明：本服務使用官方 PKCE 協議，僅在瀏覽器端分析，不會儲存您的個資。
       </p>
-      <button id="loginBtn"
-              class="w-full md:w-auto px-8 py-3 bg-green-500 hover:bg-green-600 text-gray-900 font-bold rounded-full transition duration-300 shadow-lg transform hover:scale-105">
-        登入 Spotify 開始分析
-      </button>
     </div>
 
-    <!-- 載入中 -->
-    <div id="loading-section" class="hidden flex flex-col items-center space-y-4">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-400"></div>
-      <p class="text-teal-400 font-semibold">正在分析您的音樂數據...</p>
+    <!-- 2. 載入中 -->
+    <div id="loading-section" class="hidden flex flex-col items-center justify-center py-20 relative z-10">
+      <div class="relative w-20 h-20">
+        <div class="absolute inset-0 rounded-full border-4 border-gray-700"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-t-spotify border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+      </div>
+      <p class="mt-6 text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-300 to-blue-300 animate-pulse">
+        正在解析您的音樂 DNA...
+      </p>
     </div>
 
-    <!-- 分析結果 -->
-    <div id="results-section" class="hidden space-y-6">
-      <h2 class="text-xl md:text-2xl font-bold text-center text-teal-400">您的音樂風格報告</h2>
-      <div id="user-info" class="text-center text-gray-300 text-lg"></div>
+    <!-- 3. 分析結果 (Bento Grid Dashboard) -->
+    <div id="results-section" class="hidden animate-fade-in-up relative z-10">
+      
+      <!-- 用戶歡迎語 -->
+      <div id="user-info" class="text-center mb-8"></div>
 
-      <!-- 主流度 / 新歌指數 -->
-      <div id="feature-analysis" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-
-      <!-- Logistic Regression 兩個模型結果 -->
-      <div id="lr-section" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-
-      <!-- K-pop / 華語 / 歐美 粉絲機率 -->
-      <div id="fan-type-section" class="bg-gray-800 rounded-lg p-4 text-sm text-center space-y-2"></div>
-
-      <!-- 曲風 / 歌曲 / 藝人 -->
-      <div class="space-y-4">
-        <h3 class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2">最常聽的曲風</h3>
-        <div class="bg-gray-700 p-4 rounded-lg space-y-3">
-          <div id="top-genres" class="space-y-1 text-sm scroll-container max-h-40 overflow-y-auto"></div>
+      <!-- Grid Layout -->
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        
+        <!-- 卡片 A: 主流度 (佔 3 格) -->
+        <div class="md:col-span-3 glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">聽歌主流度</h3>
+          <div id="metric-popularity" class="flex items-end gap-2">
+            <!-- JS 填充 -->
+          </div>
         </div>
 
-        <h3 class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2">您最常聽的歌曲 (Top 5)</h3>
-        <div id="top-tracks" class="bg-gray-700 p-4 rounded-lg space-y-2 text-sm"></div>
+        <!-- 卡片 B: 新歌指數 (佔 3 格) -->
+        <div class="md:col-span-3 glass-card p-6 rounded-2xl relative overflow-hidden group">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">新歌敏感度</h3>
+          <div id="metric-newness" class="flex items-end gap-2">
+            <!-- JS 填充 -->
+          </div>
+        </div>
 
-        <h3 class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2">您最愛的藝人</h3>
-        <div id="top-artists" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm"></div>
+        <!-- 卡片 C: 人格標籤 (LR Model) (佔 4 格) -->
+        <div class="md:col-span-4 glass-card p-6 rounded-2xl flex flex-col justify-center">
+           <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">聽眾人格畫像</h3>
+           <div id="lr-section" class="space-y-4">
+             <!-- JS 填充 -->
+           </div>
+        </div>
+
+        <!-- 卡片 D: 語系分佈 (佔 2 格) -->
+        <div class="md:col-span-2 glass-card p-6 rounded-2xl flex flex-col">
+          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">語系偏好</h3>
+          <div id="fan-type-section" class="flex-1 flex flex-col justify-center space-y-3">
+             <!-- JS 填充 -->
+           </div>
+        </div>
+
+        <!-- 卡片 E: Top Genres (橫向捲動) -->
+        <div class="md:col-span-6 glass-card p-6 rounded-2xl">
+           <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-3">最常聽的曲風</h3>
+           <div id="top-genres" class="flex flex-wrap gap-2">
+             <!-- JS 填充 Tags -->
+           </div>
+        </div>
+
+        <!-- 卡片 F: Top Tracks -->
+        <div class="md:col-span-3 glass-card p-6 rounded-2xl">
+          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">近期循環播放</h3>
+          <div id="top-tracks" class="space-y-3">
+             <!-- JS 填充 -->
+          </div>
+        </div>
+
+        <!-- 卡片 G: Top Artists -->
+        <div class="md:col-span-3 glass-card p-6 rounded-2xl">
+          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">本命藝人</h3>
+          <div id="top-artists" class="grid grid-cols-3 gap-3">
+             <!-- JS 填充 -->
+          </div>
+        </div>
+
       </div>
 
-      <button id="logoutBtn" class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 font-medium rounded-lg transition duration-300">
-        登出並重新分析
-      </button>
+      <div class="text-center mt-8">
+        <button id="logoutBtn" class="text-sm text-gray-500 hover:text-red-400 transition-colors underline decoration-dotted">
+          登出並清除資料
+        </button>
+      </div>
+
     </div>
 
-    <div id="error-message" class="hidden p-4 bg-red-800 text-red-100 rounded-lg text-center break-words"></div>
+    <!-- 錯誤訊息 -->
+    <div id="error-message" class="hidden mt-6 p-4 bg-red-500/10 border border-red-500/50 text-red-200 rounded-lg text-center break-words text-sm"></div>
   </div>
 
 <script>
@@ -77,9 +195,9 @@
 const CLIENT_ID = "afce28ea1bde46ebb6a293f925951763"; 
 
 // !!! 重要：部署到 GitHub Pages 後，要把這個網址換成您的 GitHub 網址 !!!
-// 例如: "https://yourname.github.io/spotify-project/"
-// 目前先保留自動偵測，方便您測試
-const REDIRECT_URI = window.location.origin + window.location.pathname;
+// 目前自動偵測，方便測試
+const REDIRECT_URI = "https://haoyu2002.github.io/spotify-analysis/";
+// 範例： const REDIRECT_URI = "https://haoyu2002.github.io/spotify-analysis/";
 
 const SCOPES = "user-read-private user-read-email user-top-read";
 
@@ -124,7 +242,6 @@ async function buildAuthUrl() {
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
 }
 
-// 修改點：直接向 Spotify 請求 Token，不需要後端
 async function exchangeCodeForToken(code) {
   const codeVerifier = localStorage.getItem('pkce_code_verifier');
   
@@ -138,9 +255,7 @@ async function exchangeCodeForToken(code) {
 
   const res = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body
   });
 
@@ -177,7 +292,7 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   window.location.href = REDIRECT_URI.split('?')[0];
 });
 
-/* 分析邏輯 (與您原本的相同) */
+/* 分析邏輯 */
 function analyzeMusicData(artists, tracks) {
   tracks = tracks || [];
   const totalTracks = tracks.length || 1;
@@ -230,70 +345,127 @@ function analyzeMusicData(artists, tracks) {
 
 function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
 
+/* 新版 Render 邏輯 - 適配新 UI */
 function renderResults(analysis, artists, tracks) {
-  // 1. Feature Bars
-  const feats = [
-    { label: '主流度', val: analysis.averages.popularity },
-    { label: '新歌指數', val: analysis.averages.newness }
-  ];
-  document.getElementById('feature-analysis').innerHTML = feats.map(f => `
-    <div class="p-3 bg-gray-800 rounded-lg">
-      <div class="text-sm text-gray-300">${f.label}</div>
-      <div class="text-2xl font-bold">${Math.round(f.val)}%</div>
-      <div class="w-full h-2 rounded-full mt-1 bg-gray-700 overflow-hidden">
-        <div class="h-2 bg-emerald-500" style="width:${f.val}%"></div>
-      </div>
-    </div>`).join('');
+  
+  // 1. Metric: Popularity
+  const popVal = Math.round(analysis.averages.popularity);
+  document.getElementById('metric-popularity').innerHTML = `
+    <span class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-200">${popVal}</span>
+    <span class="text-xl text-gray-500 mb-2">/ 100</span>
+    <div class="ml-auto w-1/2 h-2 bg-gray-700 rounded-full overflow-hidden self-center">
+        <div class="h-full bg-blue-500 shadow-[0_0_10px_#3b82f6]" style="width: ${popVal}%"></div>
+    </div>
+  `;
 
-  // 2. Personality Models
+  // 2. Metric: Newness
+  const newVal = Math.round(analysis.averages.newness);
+  document.getElementById('metric-newness').innerHTML = `
+    <span class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-200">${newVal}</span>
+    <span class="text-xl text-gray-500 mb-2">/ 100</span>
+    <div class="ml-auto w-1/2 h-2 bg-gray-700 rounded-full overflow-hidden self-center">
+        <div class="h-full bg-purple-500 shadow-[0_0_10px_#a855f7]" style="width: ${newVal}%"></div>
+    </div>
+  `;
+
+  // 3. Personality Models
   const r = analysis.regionRatios;
-  // Model A: Mainstream
   const zMain = -0.5 + 2.2*(analysis.averages.popularity/100) + 1.0*(analysis.averages.newness/100) - 0.4*(r.chinese/100) + 0.6*(r.western/100);
   const pMain = sigmoid(zMain) * 100;
   
-  // Model B: Trend Chaser
   const zNew = -1.0 + 2.5*(analysis.averages.newness/100) + 2.0*analysis.recentRatio;
   const pNew = sigmoid(zNew) * 100;
 
+  const mainLabel = pMain >= 50 ? '大眾流行派' : '獨立挖寶派';
+  const newLabel = pNew >= 50 ? '新歌追逐者' : '懷舊情懷派';
+
   document.getElementById('lr-section').innerHTML = `
-    <div class="p-3 bg-gray-800 rounded-lg">
-      <div class="text-sm text-gray-300">主流派 vs 挖寶型</div>
-      <div class="text-lg text-teal-300 font-semibold">${pMain >= 50 ? '主流派聽眾' : '挖寶型聽眾'}</div>
-      <div class="w-full h-2 bg-gray-700 rounded-full mt-2"><div class="h-2 bg-emerald-500 rounded-full" style="width:${pMain}%"></div></div>
+    <!-- Item 1 -->
+    <div class="flex items-center justify-between">
+       <div>
+         <div class="text-lg font-bold text-white">${mainLabel}</div>
+         <div class="text-xs text-gray-500">主流傾向指數</div>
+       </div>
+       <div class="text-right">
+         <span class="text-2xl font-bold text-spotify">${Math.round(pMain)}%</span>
+       </div>
     </div>
-    <div class="p-3 bg-gray-800 rounded-lg">
-      <div class="text-sm text-gray-300">新歌追星 vs 懷舊</div>
-      <div class="text-lg text-teal-300 font-semibold">${pNew >= 50 ? '新歌追星族' : '懷舊派聽眾'}</div>
-      <div class="w-full h-2 bg-gray-700 rounded-full mt-2"><div class="h-2 bg-emerald-500 rounded-full" style="width:${pNew}%"></div></div>
+    <div class="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-spotify shadow-[0_0_8px_#1DB954]" style="width: ${pMain}%"></div>
+    </div>
+
+    <!-- Item 2 -->
+    <div class="flex items-center justify-between mt-2">
+       <div>
+         <div class="text-lg font-bold text-white">${newLabel}</div>
+         <div class="text-xs text-gray-500">新品追蹤指數</div>
+       </div>
+       <div class="text-right">
+         <span class="text-2xl font-bold text-spotify">${Math.round(pNew)}%</span>
+       </div>
+    </div>
+    <div class="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-spotify shadow-[0_0_8px_#1DB954]" style="width: ${pNew}%"></div>
     </div>
   `;
 
-  // 3. Fan Types
+  // 4. Fan Types (Vertical Bars)
+  const maxVal = Math.max(r.jk, r.chinese, r.western) || 1;
   document.getElementById('fan-type-section').innerHTML = `
-    <div class="text-gray-400 mb-2">語系偏好預測</div>
-    <div class="flex justify-around">
-      <div><span class="text-teal-400">K-pop/日韓:</span> ${Math.round(r.jk)}%</div>
-      <div><span class="text-teal-400">華語:</span> ${Math.round(r.chinese)}%</div>
-      <div><span class="text-teal-400">歐美:</span> ${Math.round(r.western)}%</div>
+    <div class="space-y-3">
+        <div class="flex items-center gap-2">
+            <span class="text-xs w-12 text-gray-400">日韓</span>
+            <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full bg-pink-500" style="width:${r.jk}%"></div>
+            </div>
+            <span class="text-xs w-8 text-right text-gray-300">${Math.round(r.jk)}%</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs w-12 text-gray-400">華語</span>
+            <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full bg-yellow-500" style="width:${r.chinese}%"></div>
+            </div>
+             <span class="text-xs w-8 text-right text-gray-300">${Math.round(r.chinese)}%</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs w-12 text-gray-400">歐美</span>
+            <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full bg-indigo-500" style="width:${r.western}%"></div>
+            </div>
+             <span class="text-xs w-8 text-right text-gray-300">${Math.round(r.western)}%</span>
+        </div>
     </div>
   `;
 
-  // 4. Lists
+  // 5. Genres (Tags)
   const totalG = analysis.genreTotal || 1;
-  document.getElementById('top-genres').innerHTML = analysis.topGenres.map(([g,c], i) => `
-    <div class="flex justify-between"><span>${i+1}. ${g}</span><span class="text-gray-400 text-xs">${Math.round(c/totalG*100)}%</span></div>
-  `).join('');
+  document.getElementById('top-genres').innerHTML = analysis.topGenres.slice(0, 10).map(([g,c], i) => {
+    const opacity = Math.max(0.3, (c/analysis.topGenres[0][1])); // 相對熱度
+    return `
+    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300 whitespace-nowrap" style="opacity: ${0.6 + opacity * 0.4}">
+      #${g}
+    </span>`;
+  }).join('');
 
+  // 6. Tracks
   document.getElementById('top-tracks').innerHTML = tracks.slice(0,5).map((t,i) => `
-    <div class="flex justify-between items-center bg-gray-800 p-2 rounded">
-      <div class="truncate w-4/5 text-teal-300">${i+1}. ${t.name} <span class="text-gray-400 text-xs">- ${t.artists[0].name}</span></div>
+    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group cursor-default">
+      <div class="text-gray-500 font-mono text-sm w-4">${i+1}</div>
+      <img src="${t.album.images[2]?.url}" class="w-10 h-10 rounded shadow-md group-hover:scale-105 transition-transform">
+      <div class="flex-1 min-w-0">
+         <div class="text-sm font-medium text-white truncate group-hover:text-spotify transition-colors">${t.name}</div>
+         <div class="text-xs text-gray-500 truncate">${t.artists[0].name}</div>
+      </div>
     </div>
   `).join('');
 
+  // 7. Artists (Grid)
   document.getElementById('top-artists').innerHTML = artists.slice(0,6).map((a,i) => `
-    <div class="flex items-center gap-2 bg-gray-800 p-2 rounded">
-      <img src="${a.images[0]?.url}" class="w-8 h-8 rounded-full object-cover">
-      <span class="truncate text-xs">${a.name}</span>
+    <div class="flex flex-col items-center gap-2 p-2 group">
+      <div class="relative w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-transparent group-hover:border-spotify transition-all">
+         <img src="${a.images[0]?.url}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+      </div>
+      <span class="text-xs text-center text-gray-300 truncate w-full group-hover:text-white">${a.name}</span>
     </div>
   `).join('');
 }
@@ -304,8 +476,7 @@ window.onload = async () => {
   const code = params.get('code');
 
   if (code) {
-    // 處理 callback
-    window.history.replaceState({}, document.title, window.location.pathname); // 清除 URL 參數
+    window.history.replaceState({}, document.title, window.location.pathname);
     try {
       const tokenData = await exchangeCodeForToken(code);
       sessionStorage.setItem('sp_token', tokenData.access_token);
@@ -315,7 +486,6 @@ window.onload = async () => {
       document.getElementById('error-message').classList.remove('hidden');
     }
   } else {
-    // 檢查是否有 session
     const savedToken = sessionStorage.getItem('sp_token');
     if (savedToken) {
         runAnalysis(savedToken);
@@ -333,7 +503,10 @@ async function runAnalysis(token) {
     const artists = await fetchSpotifyApi(token, 'me/top/artists?limit=50&time_range=short_term');
     const tracks = await fetchSpotifyApi(token, 'me/top/tracks?limit=50&time_range=short_term');
 
-    document.getElementById('user-info').innerHTML = `Hi, <span class="text-white font-bold">${profile.display_name}</span>`;
+    document.getElementById('user-info').innerHTML = `
+      <h2 class="text-2xl font-light text-white">Hi, <span class="font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-300 to-white">${profile.display_name}</span></h2>
+      <p class="text-gray-500 text-sm mt-1">這是您的個人音樂基因解碼</p>
+    `;
     
     const analysis = analyzeMusicData(artists.items, tracks.items);
     renderResults(analysis, artists.items, tracks.items);
