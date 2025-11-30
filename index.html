@@ -45,11 +45,17 @@
       background-attachment: fixed;
     }
     
-    /* 自定義捲軸 */
+    /* 自定義全域捲軸 */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #1DB954; }
+
+    /* 卡片內專用捲軸 (隱藏軌道，只顯示拉桿，更美觀) */
+    .card-scroll::-webkit-scrollbar { width: 4px; }
+    .card-scroll::-webkit-scrollbar-track { background: transparent; }
+    .card-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+    .card-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 
     .glass-card {
       background: rgba(24, 24, 24, 0.6);
@@ -160,18 +166,22 @@
            </div>
         </div>
 
-        <!-- 卡片 F: Top Tracks -->
-        <div class="md:col-span-3 glass-card p-6 rounded-2xl">
-          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">近期循環播放</h3>
-          <div id="top-tracks" class="space-y-3">
+        <!-- 卡片 F: Top Tracks (Top 10) -->
+        <div class="md:col-span-3 glass-card p-6 rounded-2xl h-[400px] flex flex-col">
+          <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4 flex justify-between items-center">
+            近期循環播放 (Top 10)
+            <span class="text-xs bg-white/10 px-2 py-0.5 rounded text-gray-300">Scrollable</span>
+          </h3>
+          <!-- 加入 card-scroll 讓這個區域可以捲動 -->
+          <div id="top-tracks" class="space-y-3 overflow-y-auto card-scroll pr-2 flex-1">
              <!-- JS 填充 -->
           </div>
         </div>
 
         <!-- 卡片 G: Top Artists -->
-        <div class="md:col-span-3 glass-card p-6 rounded-2xl">
+        <div class="md:col-span-3 glass-card p-6 rounded-2xl h-[400px] flex flex-col">
           <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-4">本命藝人</h3>
-          <div id="top-artists" class="grid grid-cols-3 gap-3">
+          <div id="top-artists" class="grid grid-cols-3 gap-3 overflow-y-auto card-scroll pr-1 flex-1 content-start">
              <!-- JS 填充 -->
           </div>
         </div>
@@ -195,8 +205,7 @@
 const CLIENT_ID = "afce28ea1bde46ebb6a293f925951763"; 
 
 // !!! 重要：部署到 GitHub Pages 後，要把這個網址換成您的 GitHub 網址 !!!
-// 目前自動偵測，方便測試
-const REDIRECT_URI = "https://haoyu2002.github.io/spotify-analysis/";
+const REDIRECT_URI = window.location.origin + window.location.pathname;
 // 範例： const REDIRECT_URI = "https://haoyu2002.github.io/spotify-analysis/";
 
 const SCOPES = "user-read-private user-read-email user-top-read";
@@ -345,7 +354,7 @@ function analyzeMusicData(artists, tracks) {
 
 function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
 
-/* 新版 Render 邏輯 - 適配新 UI */
+/* 新版 Render 邏輯 */
 function renderResults(analysis, artists, tracks) {
   
   // 1. Metric: Popularity
@@ -447,11 +456,11 @@ function renderResults(analysis, artists, tracks) {
     </span>`;
   }).join('');
 
-  // 6. Tracks
-  document.getElementById('top-tracks').innerHTML = tracks.slice(0,5).map((t,i) => `
+  // 6. Tracks (改成 Top 10)
+  document.getElementById('top-tracks').innerHTML = tracks.slice(0,10).map((t,i) => `
     <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group cursor-default">
-      <div class="text-gray-500 font-mono text-sm w-4">${i+1}</div>
-      <img src="${t.album.images[2]?.url}" class="w-10 h-10 rounded shadow-md group-hover:scale-105 transition-transform">
+      <div class="text-gray-500 font-mono text-sm w-4 flex-shrink-0">${i+1}</div>
+      <img src="${t.album.images[2]?.url}" class="w-10 h-10 rounded shadow-md group-hover:scale-105 transition-transform flex-shrink-0">
       <div class="flex-1 min-w-0">
          <div class="text-sm font-medium text-white truncate group-hover:text-spotify transition-colors">${t.name}</div>
          <div class="text-xs text-gray-500 truncate">${t.artists[0].name}</div>
@@ -460,9 +469,9 @@ function renderResults(analysis, artists, tracks) {
   `).join('');
 
   // 7. Artists (Grid)
-  document.getElementById('top-artists').innerHTML = artists.slice(0,6).map((a,i) => `
+  document.getElementById('top-artists').innerHTML = artists.slice(0,12).map((a,i) => `
     <div class="flex flex-col items-center gap-2 p-2 group">
-      <div class="relative w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-transparent group-hover:border-spotify transition-all">
+      <div class="relative w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-transparent group-hover:border-spotify transition-all flex-shrink-0">
          <img src="${a.images[0]?.url}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
       </div>
       <span class="text-xs text-center text-gray-300 truncate w-full group-hover:text-white">${a.name}</span>
