@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Personal Spotify Style Analysis (Public)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .scroll-container::-webkit-scrollbar { width: 8px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: #34d399; border-radius: 4px; }
+    .scroll-container::-webkit-scrollbar-track { background: #1f2937; }
+  </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 flex items-center justify-center">
+  <div id="app" class="w-full max-w-2xl mx-auto bg-gray-800 shadow-2xl rounded-xl p-6 md:p-8 space-y-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-teal-400 text-center">
+      Personal Spotify Style Analysis
+    </h1>
+
+    <!-- 登入區塊 -->
+    <div id="login-section" class="flex flex-col items-center space-y-4">
+      <p class="text-gray-400 text-center">
+        請登入您的 Spotify 帳號，以分析您最常聽的音樂風格。
+      </p>
+      <button id="loginBtn"
+              class="w-full md:w-auto px-8 py-3 bg-green-500 hover:bg-green-600 text-gray-900 font-bold rounded-full transition duration-300 shadow-lg transform hover:scale-105">
+        登入 Spotify 開始分析
+      </button>
+    </div>
+
+    <!-- 載入中 -->
+    <div id="loading-section" class="hidden flex flex-col items-center space-y-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-400"></div>
+      <p class="text-teal-400 font-semibold">正在分析您的音樂數據...</p>
+    </div>
+
+    <!-- 分析結果 -->
+    <div id="results-section" class="hidden space-y-6">
+      <h2 class="text-xl md:text-2xl font-bold text-center text-teal-400">您的音樂風格報告</h2>
+      <div id="user-info" class="text-center text-gray-300 text-lg"></div>
+
+      <!-- 主流度 / 新歌指數 -->
+      <div id="feature-analysis" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+      <!-- Logistic Regression 兩個模型結果 -->
+      <div id="lr-section" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+      <!-- K-pop / 華語 / 歐美 粉絲機率 -->
+      <div id="fan-type-section" class="bg-gray-800 rounded-lg p-4 text-sm text-center space-y-2"></div>
+
+      <!-- 曲風 / 歌曲 / 藝人 -->
+      <div class="space-y-4">
+        <h3 class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2">最常聽的曲風</h3>
+        <div class="bg-gray-700 p-4 rounded-lg space-y-3">
+          <div id="top-genres" class="space-y-1 text-sm scroll-container max-h-40 overflow-y-auto"></div>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2">您最常聽的歌曲 (Top 5)</h3>
+        <div id="top-tracks" class="bg-gray-700 p-4 rounded-lg space-y-2 text-sm"></div>
+
+        <h3 class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-2">您最愛的藝人</h3>
+        <div id="top-artists" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm"></div>
+      </div>
+
+      <button id="logoutBtn" class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 font-medium rounded-lg transition duration-300">
+        登出並重新分析
+      </button>
+    </div>
+
+    <div id="error-message" class="hidden p-4 bg-red-800 text-red-100 rounded-lg text-center break-words"></div>
+  </div>
+
+<script>
+/* ---------- 設定區 (部署後請修改這裡!) ---------- */
+const CLIENT_ID = "afce28ea1bde46ebb6a293f925951763"; 
+
+// !!! 重要：部署到 GitHub Pages 後，要把這個網址換成您的 GitHub 網址 !!!
+// 例如: "https://yourname.github.io/spotify-project/"
+// 目前先保留自動偵測，方便您測試
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+const SCOPES = "user-read-private user-read-email user-top-read";
+
+/* ---------- PKCE 工具 ---------- */
+function generateRandomString(length=64) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(n => chars[n % chars.length]).join('');
+}
+async function sha256(plain) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  return await crypto.subtle.digest('SHA-256', data);
+}
+function base64UrlEncode(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i=0;i<bytes.byteLength;i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+/* ---------- 認證流程 ---------- */
+async function buildAuthUrl() {
+  const codeVerifier = generateRandomString(128);
+  localStorage.setItem('pkce_code_verifier', codeVerifier);
+
+  const hashed = await sha256(codeVerifier);
+  const codeChallenge = base64UrlEncode(hashed);
+  const state = generateRandomString(16);
+  localStorage.setItem('oauth_state', state);
+
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+    state
+  });
+  return `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+// 修改點：直接向 Spotify 請求 Token，不需要後端
+async function exchangeCodeForToken(code) {
+  const codeVerifier = localStorage.getItem('pkce_code_verifier');
+  
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: 'authorization_code',
+    code: code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: codeVerifier
+  });
+
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: body
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error_description || 'Token exchange failed');
+  }
+  return res.json();
+}
+
+async function fetchSpotifyApi(token, endpoint) {
+  const res = await fetch(`https://api.spotify.com/v1/${endpoint}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+       alert("Token 過期，請重新登入");
+       window.location.href = REDIRECT_URI.split('?')[0]; 
+    }
+    throw new Error(`API Error: ${res.status}`);
+  }
+  return res.json();
+}
+
+/* ---------- UI 與 邏輯 ---------- */
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const url = await buildAuthUrl();
+  window.location.href = url;
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.href = REDIRECT_URI.split('?')[0];
+});
+
+/* 分析邏輯 (與您原本的相同) */
+function analyzeMusicData(artists, tracks) {
+  tracks = tracks || [];
+  const totalTracks = tracks.length || 1;
+  const avgPopularity = tracks.reduce((sum, t) => sum + (t.popularity || 0), 0) / totalTracks;
+
+  const nowYear = new Date().getFullYear();
+  let yearSum = 0, yearCount = 0, recentCount = 0;
+  tracks.forEach(t => {
+    const dateStr = t.album?.release_date;
+    if (!dateStr) return;
+    const year = parseInt(dateStr.slice(0, 4));
+    if (!isNaN(year)) {
+      yearSum += year;
+      yearCount++;
+      if (year >= nowYear - 3) recentCount++;
+    }
+  });
+
+  const avgYear = yearCount ? (yearSum / yearCount) : nowYear;
+  const newnessScore = Math.max(0, (1 - (nowYear - avgYear) / 20) * 100);
+  const recentRatio = yearCount ? (recentCount / yearCount) : 0;
+
+  const regionCounts = { chinese: 0, jk: 0, western: 0 };
+  const genreCounts = {};
+  
+  (artists || []).forEach(a => {
+    const gText = (a.genres || []).join(' ').toLowerCase();
+    if (/(mandopop|c-pop|chinese|taiwan)/.test(gText)) regionCounts.chinese++;
+    else if (/(k-pop|korean|j-pop|japanese|anime)/.test(gText)) regionCounts.jk++;
+    else regionCounts.western++;
+
+    (a.genres || []).forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
+  });
+
+  const totalArtists = artists.length || 1;
+  const regionRatios = {
+    chinese: (regionCounts.chinese / totalArtists) * 100,
+    jk: (regionCounts.jk / totalArtists) * 100,
+    western: (regionCounts.western / totalArtists) * 100
+  };
+
+  return {
+    averages: { popularity: avgPopularity, newness: newnessScore },
+    regionRatios,
+    recentRatio,
+    topGenres: Object.entries(genreCounts).sort(([,a],[,b])=>b-a).slice(0,15),
+    genreTotal: Object.values(genreCounts).reduce((a,b)=>a+b,0)
+  };
+}
+
+function sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+
+function renderResults(analysis, artists, tracks) {
+  // 1. Feature Bars
+  const feats = [
+    { label: '主流度', val: analysis.averages.popularity },
+    { label: '新歌指數', val: analysis.averages.newness }
+  ];
+  document.getElementById('feature-analysis').innerHTML = feats.map(f => `
+    <div class="p-3 bg-gray-800 rounded-lg">
+      <div class="text-sm text-gray-300">${f.label}</div>
+      <div class="text-2xl font-bold">${Math.round(f.val)}%</div>
+      <div class="w-full h-2 rounded-full mt-1 bg-gray-700 overflow-hidden">
+        <div class="h-2 bg-emerald-500" style="width:${f.val}%"></div>
+      </div>
+    </div>`).join('');
+
+  // 2. Personality Models
+  const r = analysis.regionRatios;
+  // Model A: Mainstream
+  const zMain = -0.5 + 2.2*(analysis.averages.popularity/100) + 1.0*(analysis.averages.newness/100) - 0.4*(r.chinese/100) + 0.6*(r.western/100);
+  const pMain = sigmoid(zMain) * 100;
+  
+  // Model B: Trend Chaser
+  const zNew = -1.0 + 2.5*(analysis.averages.newness/100) + 2.0*analysis.recentRatio;
+  const pNew = sigmoid(zNew) * 100;
+
+  document.getElementById('lr-section').innerHTML = `
+    <div class="p-3 bg-gray-800 rounded-lg">
+      <div class="text-sm text-gray-300">主流派 vs 挖寶型</div>
+      <div class="text-lg text-teal-300 font-semibold">${pMain >= 50 ? '主流派聽眾' : '挖寶型聽眾'}</div>
+      <div class="w-full h-2 bg-gray-700 rounded-full mt-2"><div class="h-2 bg-emerald-500 rounded-full" style="width:${pMain}%"></div></div>
+    </div>
+    <div class="p-3 bg-gray-800 rounded-lg">
+      <div class="text-sm text-gray-300">新歌追星 vs 懷舊</div>
+      <div class="text-lg text-teal-300 font-semibold">${pNew >= 50 ? '新歌追星族' : '懷舊派聽眾'}</div>
+      <div class="w-full h-2 bg-gray-700 rounded-full mt-2"><div class="h-2 bg-emerald-500 rounded-full" style="width:${pNew}%"></div></div>
+    </div>
+  `;
+
+  // 3. Fan Types
+  document.getElementById('fan-type-section').innerHTML = `
+    <div class="text-gray-400 mb-2">語系偏好預測</div>
+    <div class="flex justify-around">
+      <div><span class="text-teal-400">K-pop/日韓:</span> ${Math.round(r.jk)}%</div>
+      <div><span class="text-teal-400">華語:</span> ${Math.round(r.chinese)}%</div>
+      <div><span class="text-teal-400">歐美:</span> ${Math.round(r.western)}%</div>
+    </div>
+  `;
+
+  // 4. Lists
+  const totalG = analysis.genreTotal || 1;
+  document.getElementById('top-genres').innerHTML = analysis.topGenres.map(([g,c], i) => `
+    <div class="flex justify-between"><span>${i+1}. ${g}</span><span class="text-gray-400 text-xs">${Math.round(c/totalG*100)}%</span></div>
+  `).join('');
+
+  document.getElementById('top-tracks').innerHTML = tracks.slice(0,5).map((t,i) => `
+    <div class="flex justify-between items-center bg-gray-800 p-2 rounded">
+      <div class="truncate w-4/5 text-teal-300">${i+1}. ${t.name} <span class="text-gray-400 text-xs">- ${t.artists[0].name}</span></div>
+    </div>
+  `).join('');
+
+  document.getElementById('top-artists').innerHTML = artists.slice(0,6).map((a,i) => `
+    <div class="flex items-center gap-2 bg-gray-800 p-2 rounded">
+      <img src="${a.images[0]?.url}" class="w-8 h-8 rounded-full object-cover">
+      <span class="truncate text-xs">${a.name}</span>
+    </div>
+  `).join('');
+}
+
+/* ---------- App Entry ---------- */
+window.onload = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+
+  if (code) {
+    // 處理 callback
+    window.history.replaceState({}, document.title, window.location.pathname); // 清除 URL 參數
+    try {
+      const tokenData = await exchangeCodeForToken(code);
+      sessionStorage.setItem('sp_token', tokenData.access_token);
+      runAnalysis(tokenData.access_token);
+    } catch (e) {
+      document.getElementById('error-message').textContent = e.message;
+      document.getElementById('error-message').classList.remove('hidden');
+    }
+  } else {
+    // 檢查是否有 session
+    const savedToken = sessionStorage.getItem('sp_token');
+    if (savedToken) {
+        runAnalysis(savedToken);
+    } else {
+        document.getElementById('login-section').classList.remove('hidden');
+    }
+  }
+};
+
+async function runAnalysis(token) {
+  document.getElementById('login-section').classList.add('hidden');
+  document.getElementById('loading-section').classList.remove('hidden');
+  try {
+    const profile = await fetchSpotifyApi(token, 'me');
+    const artists = await fetchSpotifyApi(token, 'me/top/artists?limit=50&time_range=short_term');
+    const tracks = await fetchSpotifyApi(token, 'me/top/tracks?limit=50&time_range=short_term');
+
+    document.getElementById('user-info').innerHTML = `Hi, <span class="text-white font-bold">${profile.display_name}</span>`;
+    
+    const analysis = analyzeMusicData(artists.items, tracks.items);
+    renderResults(analysis, artists.items, tracks.items);
+
+    document.getElementById('loading-section').classList.add('hidden');
+    document.getElementById('results-section').classList.remove('hidden');
+  } catch (e) {
+    document.getElementById('loading-section').classList.add('hidden');
+    document.getElementById('error-message').textContent = "分析失敗: " + e.message;
+    document.getElementById('error-message').classList.remove('hidden');
+    document.getElementById('login-section').classList.remove('hidden');
+  }
+}
+</script>
+</body>
+</html>
